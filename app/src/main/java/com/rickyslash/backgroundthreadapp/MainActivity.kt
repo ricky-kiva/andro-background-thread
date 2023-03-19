@@ -2,12 +2,70 @@ package com.rickyslash.backgroundthreadapp
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.widget.Button
+import android.widget.TextView
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        val btnStart = findViewById<Button>(R.id.btn_start)
+        val tvStatus = findViewById<TextView>(R.id.tv_status)
+
+
+        val executor = Executors.newSingleThreadExecutor()
+        val handler = Handler(Looper.getMainLooper())
+
+        btnStart.setOnClickListener {
+            lifecycleScope.launch(Dispatchers.Default) {
+                for (i in 0..10) {
+                    delay(500)
+                    val percentage = i * 10
+                    // 'withContext' used to 'switch' thread
+                    withContext(Dispatchers.Main) {
+                        if (percentage == 100) {
+                            tvStatus.setText(R.string.task_completed)
+                        } else {
+                            tvStatus.text = String.format(getString(R.string.compressing), percentage)
+                        }
+                    }
+                }
+            }
+        }
+
+        /* this if you want to use executor-handler (we now use coroutine)
+        btnStart.setOnClickListener {
+            executor.execute {
+                try {
+                    for (i in 0..10) {
+                        Thread.sleep(500)
+                        val percentage = i * 10
+                        handler.post {
+                            if (percentage == 100) {
+                                tvStatus.setText(R.string.task_completed)
+                            } else {
+                                tvStatus.text =
+                                    String.format(getString(R.string.compressing), percentage)
+                            }
+                        }
+                    }
+                } catch (e: InterruptedException) {
+                    e.printStackTrace()
+                }
+            }
+        }*/
     }
+
 }
 
 // Background Thread / Async Task : 'process' that runs 'separately' from 'main thread' / 'UI thread'
@@ -115,7 +173,7 @@ suspend fun getNumber(): Int { // state the function as 'suspend'
 // Dispatcher: to know 'where' the 'process' of 'Coroutine' is 'running'
 // - Dispatchers.Default: the 'default'. good for handling process that 'needs high CPU process' (such parsing 100 data)
 // - Dispatchers.IO: good for run function that contains 'read-write' data to 'Network/Disk'
-// - Dispatchers.Main: to run function in 'Main Thread' (such updating UI)
+// - Dispatchers.Main: to run function in 'Main Thread' / 'UI Thread' (such updating UI)
 
 // Using 'Coroutines' could reduce the potential of 'memory leaks', because it 'needs to be run on the scope' that builds 'structured concurrency'
 // this 'scope' will 'control' 'how long Coroutine run its task'. Example:
